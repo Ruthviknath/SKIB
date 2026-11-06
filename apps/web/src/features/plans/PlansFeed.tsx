@@ -134,7 +134,16 @@ export function PlansFeed({ viewer }: Props) {
                 🗓️ {dateLabel} · 📍 {plan.venue} ({plan.city.name})
               </p>
               <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>Hosted by {plan.host.name}</span>
+                <div className="row" style={{ alignItems: 'center', gap: 8 }}>
+                  {plan.host.photos[0] && (
+                    <img
+                      src={plan.host.photos[0].url}
+                      alt={plan.host.name}
+                      style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  )}
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Hosted by {plan.host.name}</span>
+                </div>
                 {plan.myMembership && (
                   <span className="chip selected" style={{ fontSize: 12, padding: '4px 10px' }}>
                     {plan.myMembership.role === 'HOST'

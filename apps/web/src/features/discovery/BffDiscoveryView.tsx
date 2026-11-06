@@ -144,18 +144,33 @@ export function BffDiscoveryView({ viewer }: Props) {
             key={m.id}
             href={`/matches/${m.id}`}
             className="card"
-            style={{ textDecoration: 'none', color: 'inherit', gap: 6 }}
+            style={{
+              textDecoration: 'none',
+              color: 'inherit',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
           >
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>
-                {m.peer.name}
-                {m.peer.age ? `, ${m.peer.age}` : ''}
-              </h2>
-              <span className="chip static">{m.peer.city?.name}</span>
+            {m.peer.photos[0] && (
+              <img
+                src={m.peer.photos[0].url}
+                alt={m.peer.name}
+                style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', flex: 'none' }}
+              />
+            )}
+            <div style={{ flex: 1 }}>
+              <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2>
+                  {m.peer.name}
+                  {m.peer.age ? `, ${m.peer.age}` : ''}
+                </h2>
+                <span className="chip static">{m.peer.city?.name}</span>
+              </div>
+              <p className="muted" style={{ marginTop: 4 }}>
+                {m.lastMessage ? m.lastMessage.body : 'New match! Tap to send the first message 👋'}
+              </p>
             </div>
-            <p className="muted">
-              {m.lastMessage ? m.lastMessage.body : 'New match! Tap to send the first message 👋'}
-            </p>
           </Link>
         ))
       )}

@@ -1,4 +1,6 @@
-// Seeds reference data (cities + interests) + demo hosts, plans, communities, and stories.
+// Seeds reference data (cities + interests) + demo hosts with realistic profile photos, plans, communities, and stories.
+import fs from 'node:fs';
+import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -29,7 +31,28 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 
+function copySeedPhotosToUploads() {
+  const seedPhotosDir = path.resolve(__dirname, '../assets/seed-photos');
+  const uploadDir = path.resolve(process.env.UPLOAD_DIR ?? 'uploads');
+  if (!fs.existsSync(seedPhotosDir)) return;
+  fs.mkdirSync(uploadDir, { recursive: true });
+  for (const file of fs.readdirSync(seedPhotosDir)) {
+    if (file.endsWith('.jpg')) {
+      fs.copyFileSync(path.join(seedPhotosDir, file), path.join(uploadDir, file));
+    }
+  }
+}
+
+async function ensureUserPhoto(userId: string, key: string) {
+  const count = await prisma.photo.count({ where: { userId } });
+  if (count === 0) {
+    await prisma.photo.create({ data: { userId, key, position: 0 } });
+  }
+}
+
 async function main() {
+  copySeedPhotosToUploads();
+
   for (const [name, state] of cities) {
     await prisma.city.upsert({
       where: { slug: slugify(name) },
@@ -54,6 +77,8 @@ async function main() {
   const boardGames = await prisma.interest.findUniqueOrThrow({ where: { slug: 'board-games' } });
   const dinners = await prisma.interest.findUniqueOrThrow({ where: { slug: 'dinners' } });
   const running = await prisma.interest.findUniqueOrThrow({ where: { slug: 'running' } });
+  const movies = await prisma.interest.findUniqueOrThrow({ where: { slug: 'movies' } });
+  const walks = await prisma.interest.findUniqueOrThrow({ where: { slug: 'walks' } });
 
   const rohan = await prisma.user.upsert({
     where: { phone: '+919900000001' },
@@ -71,6 +96,7 @@ async function main() {
       },
     },
   });
+  await ensureUserPhoto(rohan.id, 'rohan.jpg');
 
   const meera = await prisma.user.upsert({
     where: { phone: '+919900000002' },
@@ -88,6 +114,7 @@ async function main() {
       },
     },
   });
+  await ensureUserPhoto(meera.id, 'meera.jpg');
 
   const kabir = await prisma.user.upsert({
     where: { phone: '+919900000003' },
@@ -105,6 +132,25 @@ async function main() {
       },
     },
   });
+  await ensureUserPhoto(kabir.id, 'kabir.jpg');
+
+  const ananya = await prisma.user.upsert({
+    where: { phone: '+919900000004' },
+    update: {},
+    create: {
+      phone: '+919900000004',
+      name: 'Ananya',
+      birthDate: new Date('2000-06-14T00:00:00.000Z'),
+      gender: 'woman',
+      bio: 'UX researcher in Koramangala. Pour-over coffee, indie films & Sunday morning walks.',
+      cityId: blr.id,
+      onboardedAt: new Date(),
+      interests: {
+        create: [{ interestId: coffee.id }, { interestId: movies.id }, { interestId: walks.id }],
+      },
+    },
+  });
+  await ensureUserPhoto(ananya.id, 'ananya.jpg');
 
   const planCount = await prisma.plan.count();
   if (planCount === 0) {
@@ -126,6 +172,7 @@ async function main() {
           create: [
             { userId: rohan.id, role: 'HOST', status: 'APPROVED' },
             { userId: kabir.id, role: 'ATTENDEE', status: 'APPROVED' },
+            { userId: ananya.id, role: 'ATTENDEE', status: 'APPROVED' },
           ],
         },
       },
@@ -144,6 +191,7 @@ async function main() {
         planId: p1.id,
         authorId: rohan.id,
         caption: 'Last week’s pour-over table at Araku went for 3 hours! Cannot wait for round two ☕✨',
+        photoKey: 'rohan.jpg',
       },
     });
 
@@ -201,7 +249,7 @@ async function main() {
         cityId: blr.id,
         interestId: coffee.id,
         createdById: rohan.id,
-        members: { create: [{ userId: rohan.id }, { userId: kabir.id }] },
+        members: { create: [{ userId: rohan.id }, { userId: kabir.id }, { userId: ananya.id }] },
       },
     });
     await prisma.communityPost.create({
@@ -242,7 +290,7 @@ async function main() {
     });
   }
 
-  console.log(`Seeded ${cities.length} cities, ${Object.values(interests).flat().length} interests, plans, and communities`);
+  console.log(`Seeded ${cities.length} cities, ${Object.values(interests).flat().length} interests, realistic profile photos, plans, and communities`);
 }
 
 main()

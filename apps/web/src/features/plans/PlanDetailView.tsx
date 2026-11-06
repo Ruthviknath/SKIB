@@ -173,10 +173,25 @@ export function PlanDetailView({ planId, viewer }: Props) {
                 key={a.user.id}
                 href={`/members/${a.user.id}`}
                 className={`chip ${a.role === 'HOST' ? 'selected' : ''}`}
-                style={{ textDecoration: 'none' }}
+                style={{
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 12px 4px 4px',
+                }}
               >
-                {a.user.name}
-                {a.user.age ? `, ${a.user.age}` : ''} {a.role === 'HOST' ? '👑 Host' : ''}
+                {a.user.photos[0] && (
+                  <img
+                    src={a.user.photos[0].url}
+                    alt={a.user.name}
+                    style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                )}
+                <span>
+                  {a.user.name}
+                  {a.user.age ? `, ${a.user.age}` : ''} {a.role === 'HOST' ? '👑 Host' : ''}
+                </span>
               </Link>
             ))}
           </div>
