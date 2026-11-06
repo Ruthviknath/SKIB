@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { AppError } from '../../lib/errors';
 import { prisma } from '../../lib/prisma';
+import { notifyUser } from '../../services/notifications/notification.service';
 import { emitToPlanRoom } from '../../services/realtime/socket.service';
 import type { CreatePlanInput, UpdatePlanInput } from './plans.schemas';
 import { planInclude, toPlanDTO } from './plans.serializer';
@@ -171,6 +172,13 @@ export async function requestJoinPlan(userId: string, planId: string, note?: str
     },
   });
 
+  await notifyUser(plan.hostId, {
+    type: 'PLAN_REQUEST',
+    title: `New join request for "${plan.title}"`,
+    body: note ? `"${note}"` : 'Review and approve or decline their spot.',
+    link: `/plans/${planId}`,
+  });
+
   return getPlan(planId, userId);
 }
 
@@ -217,6 +225,19 @@ export async function reviewJoinRequest(
   await prisma.planMember.update({
     where: { id: target.id },
     data: { status },
+  });
+
+  await notifyUser(targetUserId, {
+    type: status === 'APPROVED' ? 'PLAN_APPROVED' : 'PLAN_REJECTED',
+    title:
+      status === 'APPROVED'
+        ? `You're in! Approved for "${plan.title}"`
+        : `Update on "${plan.title}"`,
+    body:
+      status === 'APPROVED'
+        ? 'Open the plan to say hi in the group chat!'
+        : 'Your join request was not approved this time.',
+    link: `/plans/${planId}`,
   });
 
   emitToPlanRoom(planId, 'plan:member_updated', { planId, userId: targetUserId, status });

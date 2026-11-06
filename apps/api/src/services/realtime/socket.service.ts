@@ -30,6 +30,8 @@ export function attachSocketServer(httpServer: HttpServer): SocketServer {
 
   io.on('connection', (socket) => {
     const userId = socket.data.userId as string;
+    // Personal channel for real-time notifications
+    void socket.join(`user:${userId}`);
 
     // Join a plan group chat room if the user is an APPROVED member of that plan
     socket.on('plan:join', async (planId: string, ack?: (res: { ok: boolean; error?: string }) => void) => {
@@ -52,12 +54,41 @@ export function attachSocketServer(httpServer: HttpServer): SocketServer {
     socket.on('plan:leave', async (planId: string) => {
       if (typeof planId === 'string') await socket.leave(`plan:${planId}`);
     });
+
+    // Join a 1:1 BFF match chat room if the user is one of the two matched users
+    socket.on('match:join', async (matchId: string, ack?: (res: { ok: boolean; error?: string }) => void) => {
+      if (typeof matchId !== 'string' || !matchId) {
+        ack?.({ ok: false, error: 'INVALID_MATCH' });
+        return;
+      }
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: { userAId: true, userBId: true },
+      });
+      if (!match || (match.userAId !== userId && match.userBId !== userId)) {
+        ack?.({ ok: false, error: 'NOT_IN_MATCH' });
+        return;
+      }
+      await socket.join(`match:${matchId}`);
+      ack?.({ ok: true });
+    });
+
+    socket.on('match:leave', async (matchId: string) => {
+      if (typeof matchId === 'string') await socket.leave(`match:${matchId}`);
+    });
   });
 
   return io;
 }
 
-/** Emits an event to all connected approved members of a plan room. */
 export function emitToPlanRoom(planId: string, event: string, payload: unknown): void {
   io?.to(`plan:${planId}`).emit(event, payload);
+}
+
+export function emitToMatchRoom(matchId: string, event: string, payload: unknown): void {
+  io?.to(`match:${matchId}`).emit(event, payload);
+}
+
+export function emitToUser(userId: string, event: string, payload: unknown): void {
+  io?.to(`user:${userId}`).emit(event, payload);
 }

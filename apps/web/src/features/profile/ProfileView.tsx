@@ -189,6 +189,9 @@ export function ProfileView({ initialProfile }: Props) {
         <button type="button" className="btn yellow" onClick={() => setEditing(true)}>
           Edit profile
         </button>
+        <button type="button" className="btn ghost" onClick={() => router.push('/safety')}>
+          🛡️ Safety & Moderation Center
+        </button>
         <div className="row">
           <button type="button" className="btn ghost" onClick={logout}>
             Log out

@@ -1,4 +1,4 @@
-// SKIB data model - Phase 1 (auth + onboarding) & Phase 2 (plans + host + group chat)
+// SKIB data model - Phase 1 (auth/onboarding), Phase 2 (plans/host/group chat), Phase 3 (BFF swipe, 1:1 chat, communities, notifications, safety, stories & ratings)
 // SQLite for dev; change provider to "postgresql" for production.
 
 generator client {
@@ -11,22 +11,38 @@ datasource db {
 }
 
 model User {
-  id           String         @id @default(cuid())
-  phone        String         @unique // E.164, e.g. +919876543210
-  name         String?
-  birthDate    DateTime?
-  gender       String? // woman | man | nonbinary (validated in app layer)
-  bio          String?
-  cityId       String?
-  city         City?          @relation(fields: [cityId], references: [id])
-  interests    UserInterest[]
-  photos       Photo[]
-  hostedPlans  Plan[]         @relation("PlanHost")
-  planMembers  PlanMember[]
-  planMessages PlanMessage[]
-  onboardedAt  DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id                  String            @id @default(cuid())
+  phone               String            @unique // E.164, e.g. +919876543210
+  name                String?
+  birthDate           DateTime?
+  gender              String? // woman | man | nonbinary (validated in app layer)
+  bio                 String?
+  cityId              String?
+  city                City?             @relation(fields: [cityId], references: [id])
+  interests           UserInterest[]
+  photos              Photo[]
+  hostedPlans         Plan[]            @relation("PlanHost")
+  planMembers         PlanMember[]
+  planMessages        PlanMessage[]
+  swipesGiven         Swipe[]           @relation("Swiper")
+  swipesReceived      Swipe[]           @relation("SwipeTarget")
+  matchesAsA          Match[]           @relation("MatchUserA")
+  matchesAsB          Match[]           @relation("MatchUserB")
+  directMessages      DirectMessage[]
+  createdCommunities  Community[]       @relation("CommunityCreator")
+  communityMembers    CommunityMember[]
+  communityPosts      CommunityPost[]
+  notifications       Notification[]
+  blocksInitiated     UserBlock[]       @relation("Blocker")
+  blocksReceived      UserBlock[]       @relation("Blocked")
+  reportsSubmitted    Report[]          @relation("Reporter")
+  reportsAgainst      Report[]          @relation("ReportedUser")
+  planStories         PlanStory[]
+  ratingsGiven        AttendeeRating[]  @relation("Rater")
+  ratingsReceived     AttendeeRating[]  @relation("Ratee")
+  onboardedAt         DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 }
 
 // One row per OTP sent. Codes are stored as HMAC hashes, never plain text.
@@ -43,22 +59,24 @@ model OtpCode {
 }
 
 model City {
-  id       String  @id @default(cuid())
-  name     String  @unique
-  slug     String  @unique
-  state    String
-  isActive Boolean @default(true)
-  users    User[]
-  plans    Plan[]
+  id          String      @id @default(cuid())
+  name        String      @unique
+  slug        String      @unique
+  state       String
+  isActive    Boolean     @default(true)
+  users       User[]
+  plans       Plan[]
+  communities Community[]
 }
 
 model Interest {
-  id       String         @id @default(cuid())
-  name     String         @unique
-  slug     String         @unique
-  category String
-  users    UserInterest[]
-  plans    Plan[]
+  id          String         @id @default(cuid())
+  name        String         @unique
+  slug        String         @unique
+  category    String
+  users       UserInterest[]
+  plans       Plan[]
+  communities Community[]
 }
 
 model UserInterest {
@@ -83,7 +101,7 @@ model Photo {
 
 // Phase 2: Plans, Host approval workflow, and Plan Group Chat
 model Plan {
-  id          String        @id @default(cuid())
+  id          String           @id @default(cuid())
   hostId      String
   cityId      String
   interestId  String
@@ -91,15 +109,17 @@ model Plan {
   description String?
   venue       String
   startsAt    DateTime
-  capacity    Int           @default(6) // includes the host
-  status      String        @default("OPEN") // OPEN | CANCELLED
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  host        User          @relation("PlanHost", fields: [hostId], references: [id], onDelete: Cascade)
-  city        City          @relation(fields: [cityId], references: [id])
-  interest    Interest      @relation(fields: [interestId], references: [id])
+  capacity    Int              @default(6) // includes the host
+  status      String           @default("OPEN") // OPEN | CANCELLED
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  host        User             @relation("PlanHost", fields: [hostId], references: [id], onDelete: Cascade)
+  city        City             @relation(fields: [cityId], references: [id])
+  interest    Interest         @relation(fields: [interestId], references: [id])
   members     PlanMember[]
   messages    PlanMessage[]
+  stories     PlanStory[]
+  ratings     AttendeeRating[]
 
   @@index([cityId, startsAt])
   @@index([hostId])
@@ -131,4 +151,157 @@ model PlanMessage {
   sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([planId, createdAt])
+}
+
+// Phase 3.1: Bumble BFF-style Swipe Discovery & 1:1 Matches
+model Swipe {
+  id        String   @id @default(cuid())
+  swiperId  String
+  targetId  String
+  action    String // LIKE | PASS
+  createdAt DateTime @default(now())
+  swiper    User     @relation("Swiper", fields: [swiperId], references: [id], onDelete: Cascade)
+  target    User     @relation("SwipeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([swiperId, targetId])
+  @@index([targetId, action])
+}
+
+model Match {
+  id        String          @id @default(cuid())
+  userAId   String // canonically sorted (userAId < userBId)
+  userBId   String
+  createdAt DateTime        @default(now())
+  userA     User            @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB     User            @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages  DirectMessage[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId])
+  @@index([userBId])
+}
+
+// Phase 3.2: 1:1 Direct Chat between Matches
+model DirectMessage {
+  id        String   @id @default(cuid())
+  matchId   String
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([matchId, createdAt])
+}
+
+// Phase 3.3: Local Interest Communities
+model Community {
+  id          String            @id @default(cuid())
+  name        String
+  description String
+  cityId      String
+  interestId  String
+  createdById String
+  createdAt   DateTime          @default(now())
+  city        City              @relation(fields: [cityId], references: [id])
+  interest    Interest          @relation(fields: [interestId], references: [id])
+  createdBy   User              @relation("CommunityCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  members     CommunityMember[]
+  posts       CommunityPost[]
+
+  @@index([cityId])
+}
+
+model CommunityMember {
+  communityId String
+  userId      String
+  joinedAt    DateTime  @default(now())
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([communityId, userId])
+}
+
+model CommunityPost {
+  id          String    @id @default(cuid())
+  communityId String
+  authorId    String
+  body        String
+  createdAt   DateTime  @default(now())
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, createdAt])
+}
+
+// Phase 3.4: In-App Notifications
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // PLAN_REQUEST | PLAN_APPROVED | PLAN_REJECTED | NEW_MATCH | DIRECT_MESSAGE | VOUCH_RECEIVED
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// Phase 3.5: Safety (User Blocks & Moderation Reports)
+model UserBlock {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model Report {
+  id           String   @id @default(cuid())
+  reporterId   String
+  targetUserId String
+  reason       String
+  details      String?
+  status       String   @default("OPEN") // OPEN | RESOLVED
+  createdAt    DateTime @default(now())
+  reporter     User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser   User     @relation("ReportedUser", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+}
+
+// Phase 3.6: Post-Plan Stories/Moments & Attendee Ratings/Vouches
+model PlanStory {
+  id        String   @id @default(cuid())
+  planId    String
+  authorId  String
+  caption   String
+  photoKey  String?
+  createdAt DateTime @default(now())
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([planId, createdAt])
+}
+
+model AttendeeRating {
+  id        String   @id @default(cuid())
+  planId    String
+  raterId   String
+  rateeId   String
+  score     Int // 1..5
+  vouchTag  String? // e.g. "Great energy", "Super welcoming", "On time"
+  comment   String?
+  createdAt DateTime @default(now())
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  rater     User     @relation("Rater", fields: [raterId], references: [id], onDelete: Cascade)
+  ratee     User     @relation("Ratee", fields: [rateeId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, raterId, rateeId])
+  @@index([rateeId])
 }

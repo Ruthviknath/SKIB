@@ -1,4 +1,4 @@
-// Seeds reference data (cities + interests) + demo hosts and plans so the app has live plans out of the box.
+// Seeds reference data (cities + interests) + demo hosts, plans, communities, and stories.
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -47,50 +47,67 @@ async function main() {
     }
   }
 
-  // Seed demo hosts & plans if no plans exist yet
+  const blr = await prisma.city.findUniqueOrThrow({ where: { slug: 'bangalore' } });
+  const hyd = await prisma.city.findUniqueOrThrow({ where: { slug: 'hyderabad' } });
+  const coffee = await prisma.interest.findUniqueOrThrow({ where: { slug: 'coffee' } });
+  const badminton = await prisma.interest.findUniqueOrThrow({ where: { slug: 'badminton' } });
+  const boardGames = await prisma.interest.findUniqueOrThrow({ where: { slug: 'board-games' } });
+  const dinners = await prisma.interest.findUniqueOrThrow({ where: { slug: 'dinners' } });
+  const running = await prisma.interest.findUniqueOrThrow({ where: { slug: 'running' } });
+
+  const rohan = await prisma.user.upsert({
+    where: { phone: '+919900000001' },
+    update: {},
+    create: {
+      phone: '+919900000001',
+      name: 'Rohan',
+      birthDate: new Date('1997-04-12T00:00:00.000Z'),
+      gender: 'man',
+      bio: 'Product designer in Indiranagar. Specialty coffee & weekend doubles badminton.',
+      cityId: blr.id,
+      onboardedAt: new Date(),
+      interests: {
+        create: [{ interestId: coffee.id }, { interestId: badminton.id }, { interestId: boardGames.id }],
+      },
+    },
+  });
+
+  const meera = await prisma.user.upsert({
+    where: { phone: '+919900000002' },
+    update: {},
+    create: {
+      phone: '+919900000002',
+      name: 'Meera',
+      birthDate: new Date('1999-08-22T00:00:00.000Z'),
+      gender: 'woman',
+      bio: 'Moved to Hyderabad recently! Love board games, ramen nights, and live gigs.',
+      cityId: hyd.id,
+      onboardedAt: new Date(),
+      interests: {
+        create: [{ interestId: dinners.id }, { interestId: boardGames.id }, { interestId: coffee.id }],
+      },
+    },
+  });
+
+  const kabir = await prisma.user.upsert({
+    where: { phone: '+919900000003' },
+    update: {},
+    create: {
+      phone: '+919900000003',
+      name: 'Kabir',
+      birthDate: new Date('1998-01-19T00:00:00.000Z'),
+      gender: 'man',
+      bio: 'Software engineer & marathon runner. Always up for Cubbon Park 5Ks and filter coffee.',
+      cityId: blr.id,
+      onboardedAt: new Date(),
+      interests: {
+        create: [{ interestId: running.id }, { interestId: coffee.id }, { interestId: badminton.id }],
+      },
+    },
+  });
+
   const planCount = await prisma.plan.count();
   if (planCount === 0) {
-    const blr = await prisma.city.findUniqueOrThrow({ where: { slug: 'bangalore' } });
-    const hyd = await prisma.city.findUniqueOrThrow({ where: { slug: 'hyderabad' } });
-    const coffee = await prisma.interest.findUniqueOrThrow({ where: { slug: 'coffee' } });
-    const badminton = await prisma.interest.findUniqueOrThrow({ where: { slug: 'badminton' } });
-    const boardGames = await prisma.interest.findUniqueOrThrow({ where: { slug: 'board-games' } });
-    const dinners = await prisma.interest.findUniqueOrThrow({ where: { slug: 'dinners' } });
-
-    const rohan = await prisma.user.upsert({
-      where: { phone: '+919900000001' },
-      update: {},
-      create: {
-        phone: '+919900000001',
-        name: 'Rohan',
-        birthDate: new Date('1997-04-12T00:00:00.000Z'),
-        gender: 'man',
-        bio: 'Product designer in Indiranagar. Specialty coffee & weekend doubles badminton.',
-        cityId: blr.id,
-        onboardedAt: new Date(),
-        interests: {
-          create: [{ interestId: coffee.id }, { interestId: badminton.id }, { interestId: boardGames.id }],
-        },
-      },
-    });
-
-    const meera = await prisma.user.upsert({
-      where: { phone: '+919900000002' },
-      update: {},
-      create: {
-        phone: '+919900000002',
-        name: 'Meera',
-        birthDate: new Date('1999-08-22T00:00:00.000Z'),
-        gender: 'woman',
-        bio: 'Moved to Hyderabad recently! Love board games, ramen nights, and live gigs.',
-        cityId: hyd.id,
-        onboardedAt: new Date(),
-        interests: {
-          create: [{ interestId: dinners.id }, { interestId: boardGames.id }, { interestId: coffee.id }],
-        },
-      },
-    });
-
     const tomorrow7pm = new Date(Date.now() + 26 * 3600_000);
     const sat10am = new Date(Date.now() + 50 * 3600_000);
     const sun6pm = new Date(Date.now() + 74 * 3600_000);
@@ -106,7 +123,10 @@ async function main() {
         startsAt: tomorrow7pm,
         capacity: 6,
         members: {
-          create: [{ userId: rohan.id, role: 'HOST', status: 'APPROVED' }],
+          create: [
+            { userId: rohan.id, role: 'HOST', status: 'APPROVED' },
+            { userId: kabir.id, role: 'ATTENDEE', status: 'APPROVED' },
+          ],
         },
       },
     });
@@ -116,6 +136,25 @@ async function main() {
         planId: p1.id,
         senderId: rohan.id,
         body: 'Hey everyone! Once approved, drop a quick intro here before we meet at Araku ☕',
+      },
+    });
+
+    await prisma.planStory.create({
+      data: {
+        planId: p1.id,
+        authorId: rohan.id,
+        caption: 'Last week’s pour-over table at Araku went for 3 hours! Cannot wait for round two ☕✨',
+      },
+    });
+
+    await prisma.attendeeRating.create({
+      data: {
+        planId: p1.id,
+        raterId: kabir.id,
+        rateeId: rohan.id,
+        score: 5,
+        vouchTag: 'Super welcoming',
+        comment: 'Rohan made everyone feel right at home!',
       },
     });
 
@@ -152,7 +191,58 @@ async function main() {
     });
   }
 
-  console.log(`Seeded ${cities.length} cities and ${Object.values(interests).flat().length} interests`);
+  // Seed default local communities if none exist yet
+  const communityCount = await prisma.community.count();
+  if (communityCount === 0) {
+    const c1 = await prisma.community.create({
+      data: {
+        name: 'Bangalore Specialty Coffee Club',
+        description: 'Weekend café hops, pour-over tastings, and roastery tours across Indiranagar, Koramangala & Jayanagar.',
+        cityId: blr.id,
+        interestId: coffee.id,
+        createdById: rohan.id,
+        members: { create: [{ userId: rohan.id }, { userId: kabir.id }] },
+      },
+    });
+    await prisma.communityPost.create({
+      data: {
+        communityId: c1.id,
+        authorId: rohan.id,
+        body: 'Welcome to the Bangalore Coffee Club! Share your favorite local roasters and join our weekly tastings.',
+      },
+    });
+
+    await prisma.community.create({
+      data: {
+        name: 'Cubbon Park Morning Runners',
+        description: 'Easy-pace 5K & 10K group runs every Tuesday, Thursday, and Sunday morning followed by darshini breakfast.',
+        cityId: blr.id,
+        interestId: running.id,
+        createdById: kabir.id,
+        members: { create: [{ userId: kabir.id }, { userId: rohan.id }] },
+      },
+    });
+
+    const c3 = await prisma.community.create({
+      data: {
+        name: 'Hyderabad Board Games & Tabletop',
+        description: 'From Catan and Ticket to Ride to Secret Hitler—weekly game nights across Jubilee Hills and Gachibowli.',
+        cityId: hyd.id,
+        interestId: boardGames.id,
+        createdById: meera.id,
+        members: { create: [{ userId: meera.id }] },
+      },
+    });
+    await prisma.communityPost.create({
+      data: {
+        communityId: c3.id,
+        authorId: meera.id,
+        body: 'Who is up for a 6-player Catan expansion table this Sunday evening?',
+      },
+    });
+  }
+
+  console.log(`Seeded ${cities.length} cities, ${Object.values(interests).flat().length} interests, plans, and communities`);
 }
 
 main()

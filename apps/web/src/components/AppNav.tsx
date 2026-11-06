@@ -7,25 +7,29 @@ export function AppNav() {
   const pathname = usePathname();
   const items = [
     { href: '/plans', label: '🗓️ Plans' },
-    { href: '/plans/new', label: '➕ Host Plan' },
-    { href: '/profile', label: '👤 Profile' },
+    { href: '/discover', label: '💛 BFF' },
+    { href: '/communities', label: '🏘️ Clubs' },
+    { href: '/stories', label: '📸 Stories' },
+    { href: '/notifications', label: '🔔 Alerts' },
+    { href: '/profile', label: '👤 Me' },
   ];
 
   return (
     <nav
       style={{
         display: 'flex',
-        gap: 8,
+        flexWrap: 'wrap',
+        gap: 6,
         background: '#fff',
         padding: 8,
-        borderRadius: 999,
+        borderRadius: 20,
         boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
       }}
     >
       {items.map((item) => {
         const active =
-          item.href === '/plans'
-            ? pathname === '/plans' || (pathname.startsWith('/plans/') && pathname !== '/plans/new')
+          item.href === '/discover'
+            ? pathname.startsWith('/discover') || pathname.startsWith('/matches')
             : pathname.startsWith(item.href);
         return (
           <Link
@@ -33,10 +37,11 @@ export function AppNav() {
             href={item.href}
             className={`chip ${active ? 'selected' : ''}`}
             style={{
-              flex: 1,
+              flex: '1 1 30%',
               textAlign: 'center',
               textDecoration: 'none',
-              padding: '10px 12px',
+              padding: '8px 10px',
+              fontSize: 13,
             }}
           >
             {item.label}

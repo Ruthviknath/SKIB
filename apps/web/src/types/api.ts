@@ -117,3 +117,103 @@ export interface PlanMessage {
   createdAt: string;
   sender: PublicProfile;
 }
+
+// Phase 3 types
+export interface Candidate extends PublicProfile {
+  sharedInterestCount: number;
+  sharedInterests: string[];
+}
+
+export interface MatchSummary {
+  id: string;
+  createdAt: string;
+  peer: PublicProfile;
+  lastMessage: {
+    id: string;
+    senderId: string;
+    body: string;
+    createdAt: string;
+  } | null;
+}
+
+export interface DirectMessage {
+  id: string;
+  matchId: string;
+  body: string;
+  createdAt: string;
+  sender: PublicProfile;
+}
+
+export interface CommunitySummary {
+  id: string;
+  name: string;
+  description: string;
+  city: City;
+  interest: Interest;
+  memberCount: number;
+  postCount: number;
+  joined: boolean;
+  createdAt: string;
+}
+
+export interface CommunityPost {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: PublicProfile;
+}
+
+export interface CommunityDetail extends Omit<CommunitySummary, 'postCount'> {
+  members: PublicProfile[];
+  posts: CommunityPost[];
+}
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface StoryItem {
+  id: string;
+  caption: string;
+  photoUrl: string | null;
+  createdAt: string;
+  author: PublicProfile;
+  plan: {
+    id: string;
+    title: string;
+    city: string;
+    interest: string;
+  };
+}
+
+export interface UserRatingItem {
+  id: string;
+  score: number;
+  vouchTag: string | null;
+  comment: string | null;
+  createdAt: string;
+  plan: { id: string; title: string };
+  rater: PublicProfile;
+}
+
+export interface UserRatingsSummary {
+  count: number;
+  averageScore: number | null;
+  ratings: UserRatingItem[];
+}
+
+export interface ReportItem {
+  id: string;
+  reason: string;
+  details: string | null;
+  status: 'OPEN' | 'RESOLVED';
+  createdAt: string;
+  reporter: PublicProfile;
+  targetUser: PublicProfile;
+}
