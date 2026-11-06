@@ -1,4 +1,4 @@
-// SKIB data model - Phase 1 (auth + onboarding)
+// SKIB data model - Phase 1 (auth + onboarding) & Phase 2 (plans + host + group chat)
 // SQLite for dev; change provider to "postgresql" for production.
 
 generator client {
@@ -11,19 +11,22 @@ datasource db {
 }
 
 model User {
-  id          String         @id @default(cuid())
-  phone       String         @unique // E.164, e.g. +919876543210
-  name        String?
-  birthDate   DateTime?
-  gender      String? // woman | man | nonbinary (validated in app layer)
-  bio         String?
-  cityId      String?
-  city        City?          @relation(fields: [cityId], references: [id])
-  interests   UserInterest[]
-  photos      Photo[]
-  onboardedAt DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  phone        String         @unique // E.164, e.g. +919876543210
+  name         String?
+  birthDate    DateTime?
+  gender       String? // woman | man | nonbinary (validated in app layer)
+  bio          String?
+  cityId       String?
+  city         City?          @relation(fields: [cityId], references: [id])
+  interests    UserInterest[]
+  photos       Photo[]
+  hostedPlans  Plan[]         @relation("PlanHost")
+  planMembers  PlanMember[]
+  planMessages PlanMessage[]
+  onboardedAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 // One row per OTP sent. Codes are stored as HMAC hashes, never plain text.
@@ -46,6 +49,7 @@ model City {
   state    String
   isActive Boolean @default(true)
   users    User[]
+  plans    Plan[]
 }
 
 model Interest {
@@ -54,6 +58,7 @@ model Interest {
   slug     String         @unique
   category String
   users    UserInterest[]
+  plans    Plan[]
 }
 
 model UserInterest {
@@ -74,4 +79,56 @@ model Photo {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Phase 2: Plans, Host approval workflow, and Plan Group Chat
+model Plan {
+  id          String        @id @default(cuid())
+  hostId      String
+  cityId      String
+  interestId  String
+  title       String
+  description String?
+  venue       String
+  startsAt    DateTime
+  capacity    Int           @default(6) // includes the host
+  status      String        @default("OPEN") // OPEN | CANCELLED
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  host        User          @relation("PlanHost", fields: [hostId], references: [id], onDelete: Cascade)
+  city        City          @relation(fields: [cityId], references: [id])
+  interest    Interest      @relation(fields: [interestId], references: [id])
+  members     PlanMember[]
+  messages    PlanMessage[]
+
+  @@index([cityId, startsAt])
+  @@index([hostId])
+}
+
+model PlanMember {
+  id        String   @id @default(cuid())
+  planId    String
+  userId    String
+  role      String   @default("ATTENDEE") // HOST | ATTENDEE
+  status    String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  note      String? // optional intro message when requesting to join
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, userId])
+  @@index([userId, status])
+}
+
+model PlanMessage {
+  id        String   @id @default(cuid())
+  planId    String
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([planId, createdAt])
 }

@@ -1,6 +1,12 @@
+import http from 'node:http';
 import { createApp } from './app';
 import { config } from './lib/config';
+import { attachSocketServer } from './services/realtime/socket.service';
 
-createApp().listen(config.port, () => {
-  console.log(`SKIB API listening on http://localhost:${config.port} (sms: ${config.sms.provider})`);
+const app = createApp();
+const server = http.createServer(app);
+attachSocketServer(server);
+
+server.listen(config.port, () => {
+  console.log(`SKIB API + Socket.IO listening on http://localhost:${config.port} (sms: ${config.sms.provider})`);
 });

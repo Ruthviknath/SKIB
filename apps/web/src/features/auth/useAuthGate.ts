@@ -8,7 +8,7 @@ import type { Profile } from '@/types/api';
 
 export type Gate = 'guest' | 'onboarding' | 'member';
 
-export const homeFor = (profile: Profile) => (profile.onboarding.completed ? '/profile' : '/onboarding');
+export const homeFor = (profile: Profile) => (profile.onboarding.completed ? '/plans' : '/onboarding');
 
 /**
  * Loads the current user and redirects if they are on the wrong screen:

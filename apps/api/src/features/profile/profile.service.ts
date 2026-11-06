@@ -4,7 +4,7 @@ import { AppError, ageFrom } from '../../lib/errors';
 import { prisma } from '../../lib/prisma';
 import { storage } from '../../services/storage/storage.service';
 import type { UpdateProfileInput } from './profile.schemas';
-import { profileInclude, toProfileDTO } from './profile.serializer';
+import { profileInclude, toProfileDTO, toPublicProfileDTO } from './profile.serializer';
 
 const rules = config.onboarding;
 
@@ -12,6 +12,12 @@ export async function getProfile(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: profileInclude });
   if (!user) throw new AppError(404, 'USER_NOT_FOUND', 'User not found');
   return toProfileDTO(user);
+}
+
+export async function getPublicProfile(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: profileInclude });
+  if (!user || !user.onboardedAt) throw new AppError(404, 'USER_NOT_FOUND', 'Member not found');
+  return toPublicProfileDTO(user);
 }
 
 export async function updateProfile(userId: string, input: UpdateProfileInput) {

@@ -1,9 +1,12 @@
 import { api } from '@/lib/api';
-import type { Profile, ProfileUpdate } from '@/types/api';
+import type { Profile, ProfileUpdate, PublicProfile } from '@/types/api';
 
 type ProfileResponse = { profile: Profile };
 
 export const getMyProfile = async () => (await api<ProfileResponse>('/profile/me')).profile;
+
+export const getPublicProfile = async (userId: string) =>
+  (await api<{ profile: PublicProfile }>(`/profile/${userId}`)).profile;
 
 export const updateMyProfile = async (update: ProfileUpdate) =>
   (await api<ProfileResponse>('/profile/me', { method: 'PATCH', body: update })).profile;

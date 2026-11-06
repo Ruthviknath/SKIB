@@ -29,4 +29,9 @@ router.delete('/me', async (req, res) => {
   res.status(204).end();
 });
 
+// Public member profile (view other members on Plans & Attendee lists)
+router.get('/:userId', async (req, res) => {
+  res.json({ profile: await profileService.getPublicProfile(req.params.userId) });
+});
+
 export default router;

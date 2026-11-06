@@ -44,6 +44,18 @@ export interface Profile {
   createdAt: string;
 }
 
+export interface PublicProfile {
+  id: string;
+  name: string;
+  age: number | null;
+  gender: Gender | null;
+  bio: string | null;
+  city: City | null;
+  interests: Interest[];
+  photos: Photo[];
+  createdAt: string;
+}
+
 export interface ProfileUpdate {
   name?: string;
   birthDate?: string;
@@ -51,4 +63,57 @@ export interface ProfileUpdate {
   bio?: string;
   cityId?: string;
   interestIds?: string[];
+}
+
+export type PlanRole = 'HOST' | 'ATTENDEE';
+export type PlanMemberStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface Plan {
+  id: string;
+  title: string;
+  description: string | null;
+  venue: string;
+  startsAt: string;
+  capacity: number;
+  spotsFilled: number;
+  spotsLeft: number;
+  status: 'OPEN' | 'CANCELLED';
+  city: City;
+  interest: Interest;
+  host: PublicProfile;
+  attendees: Array<{
+    role: PlanRole;
+    joinedAt: string;
+    user: PublicProfile;
+  }>;
+  myMembership: {
+    role: PlanRole;
+    status: PlanMemberStatus;
+    note: string | null;
+  } | null;
+  pendingRequests: Array<{
+    id: string;
+    note: string | null;
+    requestedAt: string;
+    user: PublicProfile;
+  }>;
+  createdAt: string;
+}
+
+export interface PlanCreateInput {
+  title: string;
+  description?: string;
+  venue: string;
+  cityId: string;
+  interestId: string;
+  startsAt: string;
+  capacity: number;
+}
+
+export interface PlanMessage {
+  id: string;
+  planId: string;
+  body: string;
+  createdAt: string;
+  sender: PublicProfile;
 }

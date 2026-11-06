@@ -1,5 +1,6 @@
 'use client';
 
+import { AppNav } from '@/components/AppNav';
 import { useAuthGate } from '@/features/auth/useAuthGate';
 import { ProfileView } from '@/features/profile/ProfileView';
 
@@ -18,8 +19,9 @@ export default function ProfilePage() {
         <h2 className="brand" style={{ fontSize: 28 }}>
           SKIB
         </h2>
-        <span className="chip static">{profile.city?.name}</span>
+        <span className="chip static">📍 {profile.city?.name}</span>
       </div>
+      <AppNav />
       <ProfileView initialProfile={profile} />
     </main>
   );
