@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.env
+*.db
+*.db-journal
+apps/api/uploads/
+apps/api/uploads-test/
+.DS_Store
+npm-debug.log*

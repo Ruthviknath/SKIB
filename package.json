@@ -1,0 +1,23 @@
+{
+  "name": "skib",
+  "private": true,
+  "description": "SKIB - meet new people in your city through real-life plans",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "setup": "npm install && npm run db:setup -w @skib/api",
+    "dev": "concurrently -n api,web -c yellow,cyan \"npm run dev -w @skib/api\" \"npm run dev -w @skib/web\"",
+    "test": "npm test -w @skib/api",
+    "build": "npm run build -w @skib/api && npm run build -w @skib/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "prisma@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.28.2": true
+  }
+}

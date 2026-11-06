@@ -1,0 +1,77 @@
+// SKIB data model - Phase 1 (auth + onboarding)
+// SQLite for dev; change provider to "postgresql" for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String         @id @default(cuid())
+  phone       String         @unique // E.164, e.g. +919876543210
+  name        String?
+  birthDate   DateTime?
+  gender      String? // woman | man | nonbinary (validated in app layer)
+  bio         String?
+  cityId      String?
+  city        City?          @relation(fields: [cityId], references: [id])
+  interests   UserInterest[]
+  photos      Photo[]
+  onboardedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+// One row per OTP sent. Codes are stored as HMAC hashes, never plain text.
+model OtpCode {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model City {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  slug     String  @unique
+  state    String
+  isActive Boolean @default(true)
+  users    User[]
+}
+
+model Interest {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  slug     String         @unique
+  category String
+  users    UserInterest[]
+}
+
+model UserInterest {
+  userId     String
+  interestId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interest   Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@id([userId, interestId])
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String // storage key (file name for local disk, object key for S3 later)
+  position  Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
